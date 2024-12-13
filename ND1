@@ -1,0 +1,82 @@
+% 1. Duomenų generavimas (simuliuojami 6G spektriniai duomenys)
+clc;
+clear;
+
+% Parametrai
+num_features = 128; % Spektrinių taškų skaičius
+num_samples_per_class = 1000; % Kiekvienos klasės pavyzdžių skaičius
+
+% Klasė 1: spektras, atspindintis mažą triukšmo lygį
+class_1 = 0.2 + 0.05 * randn(num_samples_per_class, num_features);
+
+% Klasė 2: spektras su vidutiniu triukšmo lygiu
+class_2 = 0.5 + 0.1 * randn(num_samples_per_class, num_features);
+
+% Klasė 3: spektras su dideliu triukšmo lygiu
+class_3 = 0.8 + 0.15 * randn(num_samples_per_class, num_features);
+
+% Klasės žymės
+labels_1 = ones(num_samples_per_class, 1);       % Klasė 1 (etiketė 1)
+labels_2 = 2 * ones(num_samples_per_class, 1);   % Klasė 2 (etiketė 2)
+labels_3 = 3 * ones(num_samples_per_class, 1);   % Klasė 3 (etiketė 3)
+
+% Apjungti duomenis
+X = [class_1; class_2; class_3];
+y = [labels_1; labels_2; labels_3];
+
+% 2. Duomenų maišymas ir padalijimas į mokymo/testavimo rinkinius
+rng(42); % Fiksuotas atsitiktinumas
+perm = randperm(size(X, 1));
+X = X(perm, :);
+y = y(perm, :);
+
+% Mokymo ir testavimo rinkinio dydis
+train_ratio = 0.8; % 80% mokymui, 20% testavimui
+num_train = round(train_ratio * size(X, 1));
+
+% Padaliname duomenis
+X_train = X(1:num_train, :);
+y_train = y(1:num_train, :);
+X_test = X(num_train+1:end, :);
+y_test = y(num_train+1:end, :);
+
+% 3. Duomenų normalizavimas
+mean_X = mean(X_train);
+std_X = std(X_train);
+X_train = (X_train - mean_X) ./ std_X;
+X_test = (X_test - mean_X) ./ std_X;
+
+% 4. Neuroninio tinklo kūrimas
+% Naudojame daugiasluoksnį perceptroną su vienu paslėptu sluoksniu (64 neuronai)
+num_hidden_neurons = 64;
+net = patternnet(num_hidden_neurons);
+
+% Mokymo parametrai
+net.trainParam.epochs = 500; % Iteracijų skaičius
+net.trainParam.lr = 0.01;    % Mokymosi norma
+net.trainParam.showCommandLine = true;
+
+% Konvertuojame žymes į kategorinį formatą
+y_train_cat = full(ind2vec(y_train'));
+y_test_cat = full(ind2vec(y_test'));
+
+% 5. Tinklo mokymas
+net = train(net, X_train', y_train_cat);
+
+% 6. Tinklo testavimas
+y_pred_cat = net(X_test');
+y_pred = vec2ind(y_pred_cat); % Konvertuojame į klases
+
+% 7. Rezultatų analizė
+accuracy = sum(y_pred' == y_test) / length(y_test) * 100;
+fprintf('Testavimo tikslumas: %.2f%%\n', accuracy);
+
+% Klaidos matrica
+conf_mat = confusionmat(y_test, y_pred');
+disp('Klaidos matrica:');
+disp(conf_mat);
+
+% 8. Vizualizacija
+figure;
+plotconfusion(y_test_cat, y_pred_cat);
+title('Klaidos matrica – Spektrų klasifikacija');
