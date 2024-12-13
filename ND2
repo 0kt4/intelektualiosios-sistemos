@@ -1,0 +1,81 @@
+% Duomenų generavimas
+x = 0.1:1/22:1;   % Įėjimo reikšmės (pvz., antenos padėties ar dažnio vektorius)
+y = ((1 + 0.5 * cos(2 * pi * x / 0.8)) + 0.4 * sin(2 * pi * x)) / 2; % Išėjimo reikšmės (pvz., signalo stiprumas)
+figure(1)
+plot(x, y, 'b', 'LineWidth', 2) % Braižome tikrąjį signalą
+grid on
+title('6G Antenų Apkrovimas')
+xlabel('Įėjimo parametras (pvz., dažnis)')
+ylabel('Išėjimo parametras (pvz., signalo stiprumas)')
+
+% Neuroninio tinklo parametrų inicializacija
+% Paslėptasis sluoksnis
+n_hidden = 10; % Paslėptųjų neuronų skaičius
+w_hidden = rand(1, n_hidden); % Atsitiktiniai svoriai
+b_hidden = rand(1, n_hidden); % Poslinkiai (bias)
+
+% Išėjimo sluoksnis
+w_output = rand(1, n_hidden);
+b_output = rand(1);
+
+eta = 0.05; % Mokymosi koeficientas
+epochs = 3000; % Mokymosi iteracijų skaičius
+Y = zeros(1, length(x)); % Modelio išėjimas
+
+% Mokymo procesas
+for epoch = 1:epochs
+    for i = 1:length(x)
+        % Paslėptojo sluoksnio atsako skaičiavimas
+        v_hidden = w_hidden .* x(i) + b_hidden;
+        y_hidden = tanh(v_hidden); % Aktyvavimo funkcija
+
+        % Išėjimo sluoksnis
+        v_output = sum(y_hidden .* w_output) + b_output;
+        y_output = v_output; % Tiesinė aktyvavimo funkcija
+        Y(i) = y_output;
+
+        % Klaida
+        e = y(i) - y_output;
+
+        % Svorių atnaujinimas
+        delta_output = e;
+        delta_hidden = (1 - tanh(v_hidden).^2) .* delta_output .* w_output;
+
+        w_output = w_output + eta * delta_output * y_hidden;
+        b_output = b_output + eta * delta_output;
+
+        w_hidden = w_hidden + eta * delta_hidden * x(i);
+        b_hidden = b_hidden + eta * delta_hidden;
+    end
+end
+
+% Rezultato braižymas
+hold on
+plot(x, Y, 'r--', 'LineWidth', 2) % Modelio aproksimuotas signalas
+legend('Tikras signalas', 'Modelio prognozė')
+hold off
+
+% Testavimo procesas
+x_test = 0.1:1/100:1; % Testavimo duomenys
+Y_test = zeros(1, length(x_test));
+
+for i = 1:length(x_test)
+    % Paslėptojo sluoksnio atsako skaičiavimas
+    v_hidden = w_hidden .* x_test(i) + b_hidden;
+    y_hidden = tanh(v_hidden);
+
+    % Išėjimo sluoksnis
+    v_output = sum(y_hidden .* w_output) + b_output;
+    Y_test(i) = v_output;
+end
+
+% Testavimo rezultatų vizualizacija
+figure(2)
+plot(x_test, Y_test, 'g', 'LineWidth', 2) % Modelio testavimo prognozė
+hold on
+plot(x, y, 'b', 'LineWidth', 2) % Tikrieji duomenys
+grid on
+title('Signalo Testavimas')
+xlabel('Įėjimo parametras')
+ylabel('Išėjimo parametras')
+legend('Testavimo prognozė', 'Tikras signalas')
